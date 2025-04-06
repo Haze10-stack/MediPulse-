@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPD Appointment System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        h1 {
+            color: #2563eb;
+            margin: 0;
+        }
+        form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        @media (max-width: 600px) {
+            form {
+                grid-template-columns: 1fr;
+            }
+        }
+        .full-width {
+            grid-column: span 2;
+        }
+        @media (max-width: 600px) {
+            .full-width {
+                grid-column: span 1;
+            }
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        select, textarea, input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        .result-container {
+            margin-top: 20px;
+            display: none;
+        }
+        .slots {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+        }
+        .slot-card {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            background-color: #f8fafc;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .slot-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .triage {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 10px;
+            margin-top: 15px;
+            white-space: pre-line;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .error {
+            background-color: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 10px;
+            margin-top: 15px;
+        }
+        .priority-high {
+            border-left: 4px solid #ef4444;
+        }
+        .priority-medium {
+            border-left: 4px solid #f59e0b;
+        }
+        .priority-low {
+            border-left: 4px solid #10b981;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>OPD Appointment System</h1>
+        </header>
+
+        <form id="appointmentForm">
+            <div>
+                <label for="department">Department:</label>
+                <select id="department" required>
+                    <option value="">Select Department</option>
+                    <option value="Emergency">Emergency</option>
+                    <option value="Cardiology">Cardiology</option>
+                    <option value="ENT-A">ENT-A</option>
+                    <option value="ENT-B">ENT-B</option>
+                    <option value="Endocrinology">Endocrinology</option>
+                    <option value="Eye-A">Eye-A</option>
+                    <option value="Eye-B">Eye-B</option>
+                    <option value="Gastro">Gastro</option>
+                    <option value="Gynae-A">Gynae-A</option>
+                    <option value="Gynae-B">Gynae-B</option>
+                    <option value="Medical-A">Medical-A</option>
+                    <option value="Medical-B">Medical-B</option>
+                    <option value="Haematelogy">Haematelogy</option>
+                    <option value="Medical-C">Medical-C</option>
+                    <option value="Neuro Surgery">Neuro Surgery</option>
+                    <option value="Neurology">Neurology</option>
+                    <option value="ONCOLOGY">ONCOLOGY</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="patientType">Patient Type:</label>
+                <select id="patientType" required>
+                    <option value="">Select Type</option>
+                    <option value="New">New</option>
+                    <option value="Follow-up">Follow-up</option>
+                    <option value="Regular">Regular</option>
+                    <option value="Critical">Critical</option>
+                </select>
+            </div>
+            
+            <div class="full-width">
+                <label for="symptoms">Symptoms:</label>
+                <textarea id="symptoms" rows="3" placeholder="Describe symptoms or reason for visit"></textarea>
+            </div>
+            
+            <div class="full-width">
+                <button type="submit">Find Available Slots</button>
+            </div>
+        </form>
+        
+        <div class="loading" id="loading">
+            <p>Processing your request...</p>
+        </div>
+        
+        <div class="result-container" id="resultContainer">
+            <h2>Recommended Appointment Slots</h2>
+            <div id="departmentInfo"></div>
+            
+            <div class="slots" id="slotsList">
+                <!-- Slots will be added here dynamically -->
+            </div>
+            
+            <div class="triage" id="triageInfo">
+                <!-- Triage information will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('appointmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const department = document.getElementById('department').value;
+            const patientType = document.getElementById('patientType').value;
+            const symptoms = document.getElementById('symptoms').value;
+            
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('resultContainer').style.display = 'none';
+            
+            // Create patient details object (matching backend structure)
+            const patientDetails = {
+                department: department,
+                patient_type: patientType,
+                symptoms: symptoms
+            };
+            
+            // Simulate API call with mock response
+            setTimeout(() => {
+                const response = mockApiCall(patientDetails);
+                displayResults(response);
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('resultContainer').style.display = 'block';
+            }, 1000);
+        });
+        
+        // Mock API function instead of actual backend call
+        function mockApiCall(patientDetails) {
+            // Simulate different responses based on department
+            if (patientDetails.department === 'Emergency') {
+                const now = new Date();
+                const slots = [];
+                
+                for (let i = 0; i < 3; i++) {
+                    const slotTime = new Date(now.getTime() + (15 * i * 60000));
+                    slots.push({
+                        date: formatDate(slotTime),
+                        time: formatTime(slotTime),
+                        priority: 'HIGH',
+                        estimated_wait: 0,
+                        notes: 'Emergency priority - Immediate attention required'
+                    });
+                }
+                
+                return {
+                    department: 'Emergency',
+                    recommended_slots: slots,
+                    gemini_triage: {
+                        triage_assessment: "Urgency level: Immediate\n\nRecommended initial actions:\n1. Immediate assessment by Emergency department\n2. ECG monitoring\n3. Oxygen support if needed\n\nPotential department priority: Emergency, followed by Cardiology"
+                    }
+                };
+            } else {
+                const now = new Date();
+                const slots = [];
+                
+                for (let i = 0; i < 3; i++) {
+                    const dayOffset = Math.floor(i / 2);
+                    const slotTime = new Date(now.getTime() + (dayOffset * 24 * 60 * 60000));
+                    slotTime.setHours(9 + i % 2 * 3, i % 2 * 30, 0, 0);
+                    
+                    slots.push({
+                        date: formatDate(slotTime),
+                        time: formatTime(slotTime),
+                        estimated_wait: Math.floor(Math.random() * 45) + 15,
+                        department: patientDetails.department
+                    });
+                }
+                
+                let triageAssessment = "";
+                let urgencyLevel = "Medium";
+                
+                // Customize triage based on symptoms
+                if (patientDetails.symptoms.toLowerCase().includes('pain')) {
+                    urgencyLevel = "High";
+                    triageAssessment = `Urgency level: ${urgencyLevel}\n\nRecommended initial actions:\n1. Pain assessment\n2. Vital signs monitoring\n\nPotential department priority: ${patientDetails.department}`;
+                } else if (patientDetails.patient_type === 'Critical') {
+                    urgencyLevel = "High";
+                    triageAssessment = `Urgency level: ${urgencyLevel}\n\nRecommended initial actions:\n1. Immediate specialist consultation\n2. Comprehensive assessment\n\nPotential department priority: ${patientDetails.department}`;
+                } else if (patientDetails.patient_type === 'Follow-up') {
+                    urgencyLevel = "Low";
+                    triageAssessment = `Urgency level: ${urgencyLevel}\n\nRecommended initial actions:\n1. Review previous records\n2. Standard follow-up assessment\n\nPotential department priority: ${patientDetails.department}`;
+                } else {
+                    triageAssessment = `Urgency level: ${urgencyLevel}\n\nRecommended initial actions:\n1. Standard initial assessment\n2. Vitals check\n\nPotential department priority: ${patientDetails.department}`;
+                }
+                
+                return {
+                    department: patientDetails.department,
+                    recommended_slots: slots,
+                    gemini_triage: {
+                        triage_assessment: triageAssessment
+                    }
+                };
+            }
+        }
+        
+        function displayResults(response) {
+            const departmentInfo = document.getElementById('departmentInfo');
+            const slotsList = document.getElementById('slotsList');
+            const triageInfo = document.getElementById('triageInfo');
+            
+            // Clear previous results
+            departmentInfo.innerHTML = '';
+            slotsList.innerHTML = '';
+            triageInfo.innerHTML = '';
+            
+            // Set department info
+            departmentInfo.innerHTML = `<p>Department: <strong>${response.department}</strong></p>`;
+            
+            // Add slots
+            response.recommended_slots.forEach(slot => {
+                const slotCard = document.createElement('div');
+                slotCard.className = 'slot-card';
+                
+                // Add priority class if available
+                if (slot.priority) {
+                    slotCard.classList.add(`priority-${slot.priority.toLowerCase()}`);
+                } else {
+                    slotCard.classList.add('priority-medium');
+                }
+                
+                slotCard.innerHTML = `
+                    <p><strong>Date:</strong> ${slot.date}</p>
+                    <p><strong>Time:</strong> ${slot.time}</p>
+                    <p><strong>Wait time:</strong> ${slot.estimated_wait} mins</p>
+                    ${slot.notes ? `<p><small>${slot.notes}</small></p>` : ''}
+                    <button onclick="bookAppointment('${slot.date}', '${slot.time}')">Book</button>
+                `;
+                
+                slotsList.appendChild(slotCard);
+            });
+            
+            // Add triage info if available
+            if (response.gemini_triage && response.gemini_triage.triage_assessment) {
+                triageInfo.innerHTML = `
+                    <h3>AI Triage Assessment</h3>
+                    <p>${response.gemini_triage.triage_assessment}</p>
+                `;
+            }
+        }
+        
+        function bookAppointment(date, time) {
+            alert(`Appointment booked for ${date} at ${time}`);
+        }
+        
+        // Helper functions for date formatting
+        function formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+        }
+        
+        function formatTime(date) {
+            let hours = date.getHours();
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // Convert 0 to 12
+            return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+        }
+    </script>
+</body>
+</html>
